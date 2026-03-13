@@ -23,7 +23,7 @@ with st.sidebar:
     # 🌟 녹색 테더 로고를 인터넷 주소로 직접 불러옵니다 (에러 원천 차단!)
     st.markdown(f"""
         <div style='text-align: center;'>
-            <img src="https://cryptologos.cc/logos/tether-usdt-logo.png" width="180">
+      <img src="https://raw.githubusercontent.com/ErikThiart/cryptocurrency-icons/master/128/tether.png" width="180">      
             <h1 style='color: #26A17B; margin-top: 15px;'>USDT AI TRADER</h1>
             <p style='color: #888888; font-size: 16px;'>테더 전용 자동화 매매 시스템</p>
         </div>
@@ -123,4 +123,5 @@ else:
     st.warning("📡 데이터 서버에 접속 중입니다...")
 
 time.sleep(3)
+
 st.rerun()
