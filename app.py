@@ -3,6 +3,7 @@ import ccxt
 import requests
 import pandas as pd
 from datetime import datetime
+import time
 
 # 🔐 1. 비밀 금고(Secrets) 정보 가져오기
 try:
@@ -20,10 +21,29 @@ def send_telegram_msg(message):
     except:
         pass
 
-# 🌟 3. 페이지 설정
+# 💰 3. 실시간 가격 및 김프 계산 함수
+def get_kimp_data():
+    try:
+        # 업비트 USDT 가격 가져오기
+        upbit = ccxt.upbit()
+        ticker = upbit.fetch_ticker('USDT/KRW')
+        upbit_price = ticker['last']
+        
+        # 환율 가져오기 (네이버 금융 API 활용)
+        res = requests.get('https://quotation-api-cdn.dunamu.com/v1/forex/recent?codes=FRX.KRWUSD')
+        exchange_rate = res.json()[0]['basePrice']
+        
+        # 김프 계산
+        kimp = ((upbit_price / exchange_rate) - 1) * 100
+        
+        return upbit_price, exchange_rate, kimp
+    except Exception as e:
+        return None, None, None
+
+# 🌟 4. 페이지 설정
 st.set_page_config(page_title="아르아빠 USDT AI", layout="wide")
 
-# 🔑 4. 회원 시스템 (세션 상태 초기화)
+# 🔑 5. 회원 시스템
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
 
@@ -38,10 +58,10 @@ with st.sidebar:
     st.write("---")
     
     if st.session_state['logged_in']:
-        st.success(f"⚓ {st.session_state['user_id']}님 환영합니다!")
+        st.success(f"⚓ {st.session_state['user_id']}님 접속 중")
         if st.button("🔔 무전기 테스트"):
-            send_telegram_msg("⚓ 아르 아빠님! AI 시스템에 정상 접속되었습니다. 감시를 시작합니다!")
-            st.toast("텔레그램 확인!")
+            send_telegram_msg("⚓ 아르 아빠님! 실시간 데이터 감시를 시작합니다!")
+            st.toast("텔레그램 무전 발송 완료!")
         if st.button("로그아웃"):
             st.session_state['logged_in'] = False
             st.rerun()
@@ -49,22 +69,40 @@ with st.sidebar:
 # --- 메인 화면 ---
 if not st.session_state['logged_in']:
     st.subheader("🔐 시스템 접속")
-    col1, col2 = st.columns(2)
-    with col1:
-        user_id = st.text_input("아이디", value="admin")
-        user_pw = st.text_input("비밀번호", type="password")
-        if st.button("AI 시스템 접속"):
-            # 임시 관리자 계정: admin / aror737
-            if user_id == "admin" and user_pw == "aror737":
-                st.session_state['logged_in'] = True
-                st.session_state['user_id'] = user_id
-                st.rerun()
-            else:
-                st.error("아이디 또는 비밀번호가 틀렸습니다.")
+    user_id = st.text_input("아이디", value="admin")
+    user_pw = st.text_input("비밀번호", type="password")
+    if st.button("AI 시스템 접속"):
+        if user_id == "admin" and user_pw == "aror737":
+            st.session_state['logged_in'] = True
+            st.session_state['user_id'] = user_id
+            st.rerun()
+        else:
+            st.error("비밀번호가 틀렸습니다.")
 else:
     st.title("📈 실시간 김프 감시 대시보드")
-    st.info("현재 유닛 737이 24시간 김프를 감시하고 있습니다.")
     
-    # 여기에 실제 김프 계산 코드를 다음 단계에서 넣을 거예요!
-    st.metric(label="현재 예상 김프", value="1.2%", delta="-0.2%")
-    st.write("설정하신 알림 기준(1.0%) 보다 낮아지면 자동으로 무전을 보냅니다.")
+    # 데이터 가져오기
+    u_price, ex_rate, kimp_val = get_kimp_data()
+    
+    if u_price:
+        # 대시보드 레이아웃 (3칸)
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("업비트 USDT", f"{u_price:,.2f}원")
+        with col2:
+            st.metric("현재 환율 (USD/KRW)", f"{ex_rate:,.2f}원")
+        with col3:
+            # 김프가 1%보다 낮으면 초록색, 높으면 빨간색 느낌으로!
+            kimp_color = "normal" if kimp_val > 1.0 else "inverse"
+            st.metric("실시간 김프", f"{kimp_val:.2f}%", delta=f"{kimp_val-1.0:.2f}% vs 기준(1%)", delta_color=kimp_color)
+
+        st.write("---")
+        st.write(f"⏰ 마지막 업데이트: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        # 자동 새로고침 (10초마다)
+        time.sleep(10)
+        st.rerun()
+    else:
+        st.error("데이터를 불러오는 중입니다... 잠시만 기다려주세요.")
+        time.sleep(2)
+        st.rerun()
