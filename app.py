@@ -36,7 +36,6 @@ if 'auth' not in st.session_state: st.session_state['auth'] = False
 if 'logs' not in st.session_state: st.session_state['logs'] = []
 
 # --- 메인 실행부 ---
-# st.empty()를 사용하여 화면 전체를 제어합니다.
 main_container = st.empty()
 
 # [상황 1] 로그인이 안 된 경우
@@ -46,14 +45,14 @@ if not st.session_state['auth']:
         _, col, _ = st.columns([0.1, 0.8, 0.1])
         with col:
             st.markdown("<div class='login-card'><h2>AI 오두막</h2><p>Ar & Or & Unit 737</p></div>", unsafe_allow_html=True)
-            pw = st.text_input("오두막 열쇠 (PW)", type="password")
+            pw = st.text_input("오두막 열쇠 (aror737)", type="password")
             if st.button("시스템 접속"):
                 if pw == "aror737":
                     st.session_state['auth'] = True
                     st.rerun()
                 else: st.error("열쇠가 맞지 않습니다.")
 
-# [상황 2] 로그인 성공 시 (잔상을 지우고 대시보드만 표시)
+# [상황 2] 로그인 성공 시
 else:
     with main_container.container():
         st.markdown("<div class='main-title'>⚓ USDT 김프 현황</div>", unsafe_allow_html=True)
@@ -84,7 +83,8 @@ else:
                 
                 col_k1, col_k2 = st.columns(2)
                 with col_k1: st.metric("📊 실시간 김프", f"{k_val:.2f}%", delta=f"{k_val:.2f}%", delta_color=color)
-                with col_sub2: st.metric("💵 기준 환율", f"{ex:,.1f}원")
+                # 오타 수정된 부분 (col_k2)
+                with col_k2: st.metric("💵 기준 환율", f"{ex:,.1f}원")
                 
                 # 그래프 업데이트
                 now = datetime.now().strftime('%H:%M:%S')
@@ -93,7 +93,8 @@ else:
                 
                 st.write("---")
                 st.subheader("📉 최근 변화 추이")
-                st.line_chart(pd.DataFrame(st.session_state['logs']).set_index("시간"))
+                df = pd.DataFrame(st.session_state['logs'])
+                st.line_chart(df.set_index("시간"))
             
             st.caption(f"최근 갱신: {datetime.now().strftime('%H:%M:%S')} (10초 자동 갱신)")
             
