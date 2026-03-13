@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime, timedelta, timezone
 import time
 
-# 1. 🌟 페이지 설정 (모바일 최적화)
+# 1. 🌟 페이지 설정
 st.set_page_config(page_title="아르아빠 USDT AI", layout="wide", initial_sidebar_state="collapsed")
 
 # 2. 🎨 [디자인] 고대비 & 실전 정산 UI 스타일
@@ -16,22 +16,20 @@ def apply_v39_style():
         .stAppDeployButton, [data-testid="stToolbar"] { display: none !important; }
         .stApp { background-color: #000000 !important; color: #ffffff !important; top: -50px; }
         
-        /* 지표 숫자 설정 */
         [data-testid="stMetricValue"] > div { color: #ffffff !important; font-size: clamp(1.2rem, 5vw, 2.2rem) !important; font-weight: 900 !important; }
         [data-testid="stMetricLabel"] p { color: #26A17B !important; font-weight: 700 !important; }
         
         .main-title { text-align: center; color: #26A17B; font-family: 'Black Han Sans', sans-serif; font-size: clamp(1.6rem, 7vw, 2.3rem); margin-bottom: 20px; }
         [data-testid="stMetric"] { background-color: #1e2129 !important; border-top: 4px solid #26A17B !important; padding: 15px !important; border-radius: 12px !important; }
         
-        /* 💹 일반 버튼 스타일 */
         div.stButton > button { background-color: #26A17B !important; color: white !important; font-weight: 700; border-radius: 8px; border: none; height: 3.5em; width: 100%; }
         
-        /* ⚡ 퀵 수량 버튼 스타일 */
+        /* ⚡ 퀵 수량 버튼 전용 스타일 */
         div[data-testid="stHorizontalBlock"] div.stButton > button {
             background-color: #31333f !important; border: 1px solid #555 !important; height: 2.5em !important; font-size: 0.9rem !important;
         }
 
-        /* 🔥 전량 매매 전용 (빨간색 강조) */
+        /* 🔥 전량 매매 버튼 (빨간색) */
         .full-btn div.stButton > button { background-color: #ff4b4b !important; border: none !important; }
         
         .trade-card { background-color: #1e2129; padding: 20px; border-radius: 15px; border: 1px solid #333; margin-bottom: 10px; }
@@ -51,14 +49,14 @@ def fetch_safe(target):
             except: return None
     except: return None
 
-# 4. 🎰 세션 관리 (데이터 및 버튼 상태 보존)
+# 세션 초기화
 for key, val in {'auth': False, 'cash': 10000000.0, 'qty': 0.0, 'avg': 0.0, 'menu': 'kimp',
-                 'trade_q_val': 100.0, 'history': [], 'trade_logs': []}.items():
+                 'q_val': 100.0, 'history': [], 'trade_logs': []}.items():
     if key not in st.session_state: st.session_state[key] = val
 
 apply_v39_style()
 
-# 🛡️ 로그인 (잔상 방지 플레이스홀더)
+# 🛡️ 로그인 검문소
 main_placeholder = st.empty()
 with main_placeholder.container():
     if not st.session_state['auth']:
@@ -68,7 +66,7 @@ with main_placeholder.container():
             if pw == "aror737":
                 st.session_state['auth'] = True
                 main_placeholder.empty(); time.sleep(0.15); st.rerun()
-            else: st.error("열쇠 불일치")
+            else: st.error("틀렸습니다.")
         st.stop()
 
 # 📈 메인 대시보드
@@ -78,7 +76,7 @@ with m1:
 with m2: 
     if st.button("💹 가상 매매", key="nav_trade"): st.session_state['menu'] = "trade"
 
-# 실시간 데이터 로드
+# 데이터 로드
 up, bn, ok, ex = fetch_safe("up"), fetch_safe("bn"), fetch_safe("ok"), fetch_safe("ex")
 bn_k = (bn * ex) if (bn and ex) else None
 ok_k = (ok * ex) if (ok and ex) else None
@@ -88,7 +86,6 @@ k_val = ((up / global_avg) - 1) * 100 if (up and global_avg) else 0.0
 kst = timezone(timedelta(hours=9))
 now = datetime.now(kst).strftime('%H:%M:%S')
 
-# [모드 1: 실시간 김프]
 if st.session_state['menu'] == "kimp":
     st.markdown("<div class='main-title'>⚓ USDT 실시간 검증</div>", unsafe_allow_html=True)
     c1, c2, c3, c4 = st.columns(4)
@@ -103,11 +100,10 @@ if st.session_state['menu'] == "kimp":
     st.line_chart(pd.DataFrame(st.session_state['history']).set_index("시간"))
     time.sleep(15); st.rerun()
 
-# [모드 2: 가상 매매 Pro]
 else:
     st.markdown("<div class='main-title'>💹 가상 매매 터미널 (Pro)</div>", unsafe_allow_html=True)
     
-    # 💡 실시간 정산 시뮬레이션 (수수료 공제 후 진짜 수익)
+    # 💡 실시간 정산 시뮬레이션
     current_value = st.session_state['qty'] * up
     sell_fee = current_value * 0.0005
     estimated_net = current_value - sell_fee 
@@ -122,19 +118,19 @@ else:
         p_color = "#ff4b4b" if net_pnl > 0 else "#1c83e1" if net_pnl < 0 else "#ffffff"
         st.markdown(f"<div class='trade-card'><h3>📊 예상 정산 수익 (수수료 공제 후)</h3><h2 style='color:{p_color};'>{net_pnl:,.0f}원 ({net_pnl_pct:+.2f}%)</h2><p>현재가: {up:,.0f}원</p></div>", unsafe_allow_html=True)
         if (current_value - total_invested) > 0 and net_pnl < 0:
-            st.markdown("<div class='profit-warning'>⚠️ 경고: 수수료를 떼면 마이너스입니다! 더 오를 때까지 대기하세요.</div>", unsafe_allow_html=True)
+            st.markdown("<div class='profit-warning'>⚠️ 수수료 공제 시 수익이 마이너스입니다! 더 기다리세요.</div>", unsafe_allow_html=True)
 
     st.write("---")
     
-    # 🛒 매수 섹션 (퀵 수량 버튼 전선 연결)
-    st.subheader("🛒 매수 실행 (USDT)")
+    # 🟢 [매수 섹션]
+    st.subheader("🛒 USDT 매수")
     bq1, bq2, bq3, bq4 = st.columns(4)
-    if bq1.button("100", key="buy_100"): st.session_state['trade_q_val'] = 100.0; st.rerun()
-    if bq2.button("500", key="buy_500"): st.session_state['trade_q_val'] = 500.0; st.rerun()
-    if bq3.button("1000", key="buy_1000"): st.session_state['trade_q_val'] = 1000.0; st.rerun()
-    if bq4.button("3000", key="buy_3000"): st.session_state['trade_q_val'] = 3000.0; st.rerun()
+    if bq1.button("100", key="b100"): st.session_state['q_val'] = 100.0; st.rerun()
+    if bq2.button("500", key="b500"): st.session_state['q_val'] = 500.0; st.rerun()
+    if bq3.button("1000", key="b1000"): st.session_state['q_val'] = 1000.0; st.rerun()
+    if bq4.button("3000", key="b3000"): st.session_state['q_val'] = 3000.0; st.rerun()
     
-    trade_q = st.number_input("거래 수량 입력", value=st.session_state['trade_q_val'], step=10.0, key="q_input")
+    trade_q = st.number_input("거래 수량 입력", value=st.session_state['q_val'], step=10.0, key="q_input")
     
     c_b1, c_b2 = st.columns(2)
     with c_b1:
@@ -158,8 +154,8 @@ else:
 
     st.write("---")
     
-    # 💰 매도 섹션 (즉시 vs 전량 정산)
-    st.subheader("💰 매도 실행 (USDT)")
+    # 🔴 [매도 섹션]
+    st.subheader("💰 USDT 매도")
     c_s1, c_s2 = st.columns(2)
     with c_s1:
         if st.button("💸 즉시 매도"):
