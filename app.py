@@ -1,32 +1,42 @@
-def fetch_prices():
-    h = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
-    data = {"up": None, "bn": None, "ok": None}
-    
-    # 1. 업비트 (국내)
-    try:
-        data["up"] = float(requests.get("https://api.upbit.com/v1/ticker?markets=KRW-USDT", timeout=5).json()[0]['trade_price'])
-    except Exception as e:
-        st.error(f"업비트 통신 에러: {e}")
+import streamlit as st
+import requests
 
-    # 2. 바이낸스 (해외) - 엔드포인트 여러 개 시도
-    bn_urls = ["https://api.binance.com/api/v3/ticker/price?symbol=USDTUSD", 
-               "https://api1.binance.com/api/v3/ticker/price?symbol=USDTUSD",
-               "https://api3.binance.com/api/v3/ticker/price?symbol=USDTUSD"]
-    for url in bn_urls:
-        try:
-            res = requests.get(url, headers=h, timeout=5)
-            if res.status_code == 200:
-                data["bn"] = float(res.json()['price'])
-                break
-        except:
-            continue
-            
-    # 3. OKX (해외)
-    try:
-        res = requests.get("https://www.okx.com/api/v5/market/ticker?instId=USDT-USD", headers=h, timeout=5)
-        if res.status_code == 200:
-            data["ok"] = float(res.json()['data'][0]['last'])
-    except Exception as e:
-        pass # OKX가 안되더라도 바이낸스가 있으면 작동함
+# 1. 페이지 설정 (최상단)
+st.set_page_config(page_title="USDT 복구 모드", layout="wide")
 
-    return data
+# 2. 간단한 스타일 (충돌 방지)
+st.markdown("""<style>
+    .reportview-container { background: #0e1117; }
+    h1 { color: #26A17B; }
+</style>""", unsafe_allow_html=True)
+
+# 3. 세션 초기화
+if 'auth' not in st.session_state:
+    st.session_state['auth'] = False
+
+# 4. 로그인 체크 (이게 안 뜨면 코드 실행 자체가 막힌 것임)
+if not st.session_state['auth']:
+    st.title("🛡️ 시스템 보안 접속")
+    pw = st.text_input("열쇠를 입력하세요", type="password")
+    if st.button("접속"):
+        if pw == "aror737":
+            st.session_state['auth'] = True
+            st.rerun()
+        else:
+            st.error("비밀번호가 틀렸습니다.")
+    st.stop()
+
+# 5. 메인 화면 (로그인 성공 시)
+st.title("✅ 접속 성공")
+st.write("이제 데이터를 불러옵니다...")
+
+# 여기서부터 데이터 수집 로직 시작
+try:
+    up_price = requests.get("https://api.upbit.com/v1/ticker?markets=KRW-USDT", timeout=5).json()[0]['trade_price']
+    st.metric("업비트 현재가", f"{up_price:,.0f}원")
+except Exception as e:
+    st.error(f"데이터 연결 실패: {e}")
+
+if st.button("로그아웃"):
+    st.session_state['auth'] = False
+    st.rerun()
