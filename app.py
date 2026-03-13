@@ -8,7 +8,7 @@ import time
 st.set_page_config(page_title="아르아빠 USDT AI", layout="wide", initial_sidebar_state="collapsed")
 
 # 2. 🎨 [디자인] 고대비 & 실전 정산 UI 스타일
-def apply_v37_style():
+def apply_v38_style():
     st.markdown("""
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@700;900&display=swap');
@@ -28,7 +28,7 @@ def apply_v37_style():
         .full-btn > div > button { background-color: #ff4b4b !important; } /* 전량 매매는 강조색 */
         
         .trade-card { background-color: #1e2129; padding: 20px; border-radius: 15px; border: 1px solid #333; margin-bottom: 10px; }
-        .profit-warning { color: #ff4b4b; font-weight: 900; font-size: 1.1rem; border: 1px solid #ff4b4b; padding: 5px; border-radius: 5px; text-align: center; }
+        .profit-warning { color: #ff4b4b; font-weight: 900; font-size: 1.1rem; border: 1px solid #ff4b4b; padding: 8px; border-radius: 8px; text-align: center; margin-bottom: 15px; }
         </style>
     """, unsafe_allow_html=True)
 
@@ -49,14 +49,14 @@ for key, val in {'auth': False, 'cash': 10000000.0, 'qty': 0.0, 'avg': 0.0, 'men
                  'buy_q': 100.0, 'sell_q': 100.0, 'history': [], 'trade_logs': []}.items():
     if key not in st.session_state: st.session_state[key] = val
 
-apply_v37_style()
+apply_v38_style()
 
 # 🛡️ 로그인
 main_placeholder = st.empty()
 with main_placeholder.container():
     if not st.session_state['auth']:
         st.markdown("<br><br><div style='background-color:#26A17B; padding:30px; border-radius:20px; color:white; text-align:center;'><h1>AI 오두막</h1><p>Ar & Or & Unit 737 Pro Terminal</p></div>", unsafe_allow_html=True)
-        pw = st.text_input("열쇠 (PW)", type="password", key="login_v37")
+        pw = st.text_input("열쇠 (PW)", type="password", key="login_v38")
         if st.button("시스템 접속"):
             if pw == "aror737":
                 st.session_state['auth'] = True
@@ -101,14 +101,11 @@ else:
     # 💡 [핵심] 실시간 정산 시뮬레이션
     current_value = st.session_state['qty'] * up
     sell_fee = current_value * 0.0005
-    estimated_net_proceeds = current_value - sell_fee # 지금 팔면 내 손에 쥐어질 돈
+    estimated_net_proceeds = current_value - sell_fee # 지금 팔면 내 손에 들어올 최종 현금
     
-    # 총 투자 금액 (수수료 포함했던 금액)
     total_invested = st.session_state['qty'] * st.session_state['avg']
-    
-    # 실질 순수익 계산
     net_pnl = estimated_net_proceeds - total_invested
-    net_pnl_pct = (net_pnl / total_invest invested * 100) if total_invested > 0 else 0
+    net_pnl_pct = (net_pnl / total_invested * 100) if total_invested > 0 else 0
 
     v1, v2 = st.columns(2)
     with v1: 
@@ -116,12 +113,13 @@ else:
     with v2:
         p_color = "#ff4b4b" if net_pnl > 0 else "#1c83e1" if net_pnl < 0 else "#ffffff"
         st.markdown(f"<div class='trade-card'><h3>📊 예상 정산 수익 (수수료 공제 후)</h3><h2 style='color:{p_color};'>{net_pnl:,.0f}원 ({net_pnl_pct:+.2f}%)</h2><p>현재가: {up:,.0f}원</p></div>", unsafe_allow_html=True)
-        if (st.session_state['qty'] * up - total_invested) > 0 and net_pnl < 0:
-            st.markdown("<div class='profit-warning'>⚠️ 경고: 수수료 때문에 정산 시 마이너스입니다!</div>", unsafe_allow_html=True)
+        # ⚠️ 수익은 플러스인데 수수료 떼면 마이너스인 경우 경고
+        if (current_value - total_invested) > 0 and net_pnl < 0:
+            st.markdown("<div class='profit-warning'>⚠️ 수수료를 공제하면 마이너스입니다! 더 오를 때까지 기다리세요.</div>", unsafe_allow_html=True)
 
     st.write("---")
     
-    # 🟢 매수 영역
+    # 🟢 매수 영역 (즉시 vs 전량)
     st.subheader("🛒 매수 실행")
     bq1, bq2, bq3, bq4 = st.columns(4)
     if bq1.button("100", key="buy100"): st.session_state['buy_q'] = 100.0
@@ -129,7 +127,7 @@ else:
     if bq3.button("1000", key="buy1000"): st.session_state['buy_q'] = 1000.0
     if bq4.button("3000", key="buy3000"): st.session_state['buy_q'] = 3000.0
     
-    buy_input = st.number_input("매수 수량(USDT)", value=st.session_state['buy_q'], step=10.0, key="bi")
+    buy_input = st.number_input("매수 수량(USDT)", value=st.session_state['buy_q'], step=10.0, key="bi_v38")
     
     b_col1, b_col2 = st.columns(2)
     with b_col1:
@@ -144,16 +142,16 @@ else:
         st.markdown("<div class='full-btn'>", unsafe_allow_html=True)
         if st.button("🔥 전량 매수 (ALL IN)"):
             max_qty = (st.session_state['cash'] / 1.0005) / up
-            if max_qty > 0:
+            if max_qty > 0.1:
                 cost = max_qty * up * 1.0005
                 st.session_state['avg'] = ((st.session_state['qty'] * st.session_state['avg']) + (max_qty * up)) / (st.session_state['qty'] + max_qty)
                 st.session_state['qty'] += max_qty; st.session_state['cash'] -= cost
-                st.success("올인 매수 완료!"); time.sleep(0.5); st.rerun()
+                st.success("전량 매수 완료!"); time.sleep(0.5); st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.write("---")
     
-    # 🔴 매도 영역
+    # 🔴 매도 영역 (즉시 vs 전량)
     st.subheader("💰 매도 실행")
     sq1, sq2, sq3, sq4 = st.columns(4)
     if sq1.button("100", key="sell100"): st.session_state['sell_q'] = 100.0
@@ -161,7 +159,7 @@ else:
     if sq3.button("1000", key="sell1000"): st.session_state['sell_q'] = 1000.0
     if sq4.button("3000", key="sell3000"): st.session_state['sell_q'] = 3000.0
     
-    sell_input = st.number_input("매도 수량(USDT)", value=st.session_state['sell_q'], step=10.0, key="si")
+    sell_input = st.number_input("매도 수량(USDT)", value=st.session_state['sell_q'], step=10.0, key="si_v38")
     
     s_col1, s_col2 = st.columns(2)
     with s_col1:
