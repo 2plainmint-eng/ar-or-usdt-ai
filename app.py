@@ -7,23 +7,40 @@ import time
 # 1. 🌟 페이지 설정
 st.set_page_config(page_title="아르아빠 USDT AI", layout="wide")
 
-# 2. 🎨 [디자인] 고대비 프리미엄 스타일 (글자색 강화)
-def apply_high_contrast_style():
+# 2. 🎨 [디자인] 초고대비 프리미엄 스타일 (서브헤더 보강)
+def apply_ultra_contrast_style():
     st.markdown("""
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
         
-        /* 기본 배경색 강제 지정 */
+        /* 전체 배경 */
         .stApp { background-color: #0e1117 !important; }
         
-        /* 제목: 쨍하게 고정 */
-        .main-title { 
-            text-align: center; color: #26A17B; font-weight: 700; 
-            font-size: clamp(1.5rem, 6vw, 2.2rem); 
-            margin: 20px 0; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        /* [수정] 메인 제목 & 서브 제목 (최근 변화 추이 등) 강제 흰색 */
+        .main-title, h1, h2, h3, .stSubheader { 
+            text-align: center; 
+            color: #ffffff !important; 
+            font-weight: 700 !important; 
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
         }
         
-        /* 지표 카드 (배경은 어둡게, 테두리는 선명하게) */
+        .main-title { 
+            color: #26A17B !important; 
+            font-size: clamp(1.5rem, 6vw, 2.2rem); 
+            margin: 20px 0; 
+        }
+
+        /* [수정] 최근 변화 추이 글자 시인성 강화 */
+        .stMarkdown h3 {
+            color: #ffffff !important;
+            font-size: clamp(1.2rem, 5vw, 1.6rem) !important;
+            margin-top: 30px !important;
+            border-left: 5px solid #26A17B;
+            padding-left: 10px;
+            text-align: left !important; /* 모바일 가독성을 위해 왼쪽 정렬 */
+        }
+        
+        /* 지표 카드 스타일 */
         [data-testid="stMetric"] {
             background-color: #1e2129 !important;
             padding: 20px !important;
@@ -33,19 +50,17 @@ def apply_high_contrast_style():
             border-top: 5px solid #26A17B !important;
         }
         
-        /* 💡 핵심: 글자색을 무조건 흰색(#FFFFFF)으로 강제! */
+        /* 지표 숫자 쨍하게 고정 */
         [data-testid="stMetricValue"] > div {
             color: #ffffff !important;
             font-size: clamp(1.8rem, 7vw, 2.8rem) !important;
             font-weight: 800 !important;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
         }
         
-        /* 지표 라벨 (업비트, 바이낸스 등 상단 글자) */
+        /* 지표 라벨 (업비트, 바이낸스 등) */
         [data-testid="stMetricLabel"] p {
             color: #d1d1d1 !important;
             font-size: clamp(0.9rem, 4vw, 1.1rem) !important;
-            font-weight: 500 !important;
         }
 
         /* 버튼 디자인 */
@@ -53,9 +68,6 @@ def apply_high_contrast_style():
             background-color: #26A17B; color: white; border-radius: 12px; 
             font-weight: 700; width: 100%; height: 4em; border: none;
         }
-        
-        /* 하단 캡션 */
-        .stCaption { color: #888888 !important; }
         </style>
     """, unsafe_allow_html=True)
 
@@ -71,7 +83,7 @@ def get_price(url, keys):
 if 'auth' not in st.session_state: st.session_state['auth'] = False
 if 'chart_history' not in st.session_state: st.session_state['chart_history'] = []
 
-apply_high_contrast_style()
+apply_ultra_contrast_style()
 
 # ---------------------------------------------------------
 # 🛡️ [아빠님 솔루션] 잔상 방지 100% 적용
@@ -84,19 +96,19 @@ with main_placeholder.container():
         _, col_login, _ = st.columns([0.05, 0.9, 0.05])
         with col_login:
             st.markdown("<div style='background-color:#26A17B; padding:30px; border-radius:20px; color:white; text-align:center;'><h1>AI 오두막</h1><p>Ar & Or & Unit 737 Access</p></div>", unsafe_allow_html=True)
-            pw = st.text_input("오두막 열쇠 (PW)", type="password", key="pw_v12")
-            if st.button("시스템 접속", key="btn_v12"):
+            pw = st.text_input("오두막 열쇠 (PW)", type="password", key="pw_final")
+            if st.button("시스템 접속", key="btn_final"):
                 if pw == "aror737":
                     st.session_state['auth'] = True
                     main_placeholder.empty()
-                    time.sleep(0.15)
+                    time.sleep(0.15) # 아빠님의 타이밍 보정 묘수
                     st.rerun()
                 else:
                     st.error("열쇠가 맞지 않습니다.")
         st.stop()
 
 # ---------------------------------------------------------
-# 📈 [대시보드] 고대비 렌더링
+# 📈 [대시보드] 옥에 티 박멸 렌더링
 # ---------------------------------------------------------
 
 st.markdown("<div class='main-title'>⚓ USDT 김프 현황</div>", unsafe_allow_html=True)
@@ -111,7 +123,6 @@ if up_k and ex:
     bn_k = (bn_u * ex) if bn_u else None
     ok_k = (ok_u * ex) if ok_u else None
     
-    # 3열 지표
     c1, c2, c3 = st.columns(3)
     with c1: st.metric("🇰🇷 업비트", f"{up_k:,.0f}원")
     with c2: st.metric("🔶 바이낸스", f"{bn_k:,.0f}원" if bn_k else "대기중")
@@ -119,7 +130,6 @@ if up_k and ex:
     
     st.write("---")
     
-    # 중앙 김프 및 환율
     avg_global = [p for p in [bn_k, ok_k] if p]
     if avg_global:
         k_val = ((up_k / (sum(avg_global)/len(avg_global))) - 1) * 100
@@ -135,10 +145,12 @@ if up_k and ex:
         if len(st.session_state['chart_history']) > 25: st.session_state['chart_history'].pop(0)
         
         st.write("---")
+        # 💡 흐릿했던 부분을 명확하게 수정
         st.subheader("📉 최근 변화 추이")
-        st.line_chart(pd.DataFrame(st.session_state['chart_history']).set_index("시간"))
+        df = pd.DataFrame(st.session_state['chart_history'])
+        st.line_chart(df.set_index("시간"))
     
-    st.caption(f"최근 갱신: {now} (12초 자동 갱신)")
+    st.caption(f"최근 갱신: {now} (12초 자동 갱신 중)")
     
     with st.sidebar:
         st.success("⚓ 아르 아빠님 접속 중")
