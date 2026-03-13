@@ -6,38 +6,38 @@ from datetime import datetime
 import time
 
 # 🔐 1. 비밀 금고(Secrets) 정보 가져오기
-try:
-    TELEGRAM_TOKEN = st.secrets["TELEGRAM_TOKEN"]
-    TELEGRAM_CHAT_ID = st.secrets["TELEGRAM_CHAT_ID"]
-except:
-    st.warning("⚠️ 스트림릿 Secrets 설정을 확인해주세요.")
+TELEGRAM_TOKEN = st.secrets.get("TELEGRAM_TOKEN", "")
+TELEGRAM_CHAT_ID = st.secrets.get("TELEGRAM_CHAT_ID", "")
 
 # 📢 2. 텔레그램 무전 함수
 def send_telegram_msg(message):
-    try:
-        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-        params = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
-        requests.get(url, params=params)
-    except:
-        pass
+    if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
+        try:
+            url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+            params = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
+            requests.get(url, params=params)
+        except:
+            pass
 
-# 💰 3. 실시간 가격 및 김프 계산 함수
+# 💰 3. 실시간 가격 및 김프 계산 (더 튼튼해진 버전!)
 def get_kimp_data():
     try:
-        # 업비트 USDT 가격 가져오기
-        upbit = ccxt.upbit()
-        ticker = upbit.fetch_ticker('USDT/KRW')
-        upbit_price = ticker['last']
+        # 업비트 USDT 가격 (ccxt가 안될 때를 대비해 직접 호출)
+        upbit_res = requests.get('https://api.upbit.com/v1/ticker?markets=KRW-USDT').json()
+        upbit_price = float(upbit_res[0]['trade_price'])
         
-        # 환율 가져오기 (네이버 금융 API 활용)
-        res = requests.get('https://quotation-api-cdn.dunamu.com/v1/forex/recent?codes=FRX.KRWUSD')
-        exchange_rate = res.json()[0]['basePrice']
+        # 환율 가져오기 (사람인 척 속이는 '미끼' 추가)
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        ex_res = requests.get('https://quotation-api-cdn.dunamu.com/v1/forex/recent?codes=FRX.KRWUSD', headers=headers).json()
+        exchange_rate = float(ex_res[0]['basePrice'])
         
         # 김프 계산
         kimp = ((upbit_price / exchange_rate) - 1) * 100
         
         return upbit_price, exchange_rate, kimp
     except Exception as e:
+        # 에러가 나면 화면에 살짝 표시 (나중에 지워도 됨)
+        # st.sidebar.error(f"오류 발생: {e}")
         return None, None, None
 
 # 🌟 4. 페이지 설정
@@ -60,8 +60,8 @@ with st.sidebar:
     if st.session_state['logged_in']:
         st.success(f"⚓ {st.session_state['user_id']}님 접속 중")
         if st.button("🔔 무전기 테스트"):
-            send_telegram_msg("⚓ 아르 아빠님! 실시간 데이터 감시를 시작합니다!")
-            st.toast("텔레그램 무전 발송 완료!")
+            send_telegram_msg("⚓ 아르 아빠님! 무전기가 정상 작동 중입니다!")
+            st.toast("텔레그램 무전 완료!")
         if st.button("로그아웃"):
             st.session_state['logged_in'] = False
             st.rerun()
@@ -74,7 +74,6 @@ if not st.session_state['logged_in']:
     if st.button("AI 시스템 접속"):
         if user_id == "admin" and user_pw == "aror737":
             st.session_state['logged_in'] = True
-            st.session_state['user_id'] = user_id
             st.rerun()
         else:
             st.error("비밀번호가 틀렸습니다.")
@@ -84,25 +83,24 @@ else:
     # 데이터 가져오기
     u_price, ex_rate, kimp_val = get_kimp_data()
     
-    if u_price:
-        # 대시보드 레이아웃 (3칸)
+    if u_price and ex_rate:
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric("업비트 USDT", f"{u_price:,.2f}원")
+            st.metric("업비트 USDT", f"{u_price:,.1f} 원")
         with col2:
-            st.metric("현재 환율 (USD/KRW)", f"{ex_rate:,.2f}원")
+            st.metric("현재 환율 (USD/KRW)", f"{ex_rate:,.1f} 원")
         with col3:
-            # 김프가 1%보다 낮으면 초록색, 높으면 빨간색 느낌으로!
-            kimp_color = "normal" if kimp_val > 1.0 else "inverse"
-            st.metric("실시간 김프", f"{kimp_val:.2f}%", delta=f"{kimp_val-1.0:.2f}% vs 기준(1%)", delta_color=kimp_color)
+            # 김프 1% 기준 색상
+            color = "normal" if kimp_val > 1.0 else "inverse"
+            st.metric("실시간 김프", f"{kimp_val:.2f} %", delta=f"{kimp_val-1.0:.2f}%", delta_color=color)
 
         st.write("---")
-        st.write(f"⏰ 마지막 업데이트: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        st.caption(f"마지막 업데이트: {datetime.now().strftime('%H:%M:%S')} (10초마다 갱신)")
         
-        # 자동 새로고침 (10초마다)
+        # 10초 뒤 자동 새로고침
         time.sleep(10)
         st.rerun()
     else:
-        st.error("데이터를 불러오는 중입니다... 잠시만 기다려주세요.")
-        time.sleep(2)
+        st.warning("🔄 데이터 낚시 중... 잠시만 기다려주세요.")
+        time.sleep(3)
         st.rerun()
